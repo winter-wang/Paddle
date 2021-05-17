@@ -1,4 +1,4 @@
-/* Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.
+/* Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,21 +29,20 @@ limitations under the License. */
 #include <vector>
 
 #include "paddle_config.h"  // NOLINT
-#include "paddle_api.h"              // NOLINT
 
 ///
-/// \file paddle_inference_api.h
+/// \file paddle_predictor.h
 ///
 /// \brief Paddle Inference API
 ///
 /// \author paddle-infer@baidu.com
-/// \date 2020-09-01
-/// \since 2.0.0-beta
+/// \date 2021-05-15
+/// \since 2.2
 ///
 
 namespace paddle_infer {
 
-using PrecisionType = Config::Precision;
+class Tensor;
 
 ///
 /// \class Predictor
@@ -76,25 +75,18 @@ using PrecisionType = Config::Precision;
 ///
 class PD_INFER_DECL Predictor {
  public:
-  Predictor() = delete;
-  ~Predictor() {}
-  // Use for clone
-  explicit Predictor(std::unique_ptr<paddle::PaddlePredictor>&& pred)
-      : predictor_(std::move(pred)) {}
-
   ///
-  /// \brief Construct a new Predictor object
+  /// \brief Virtual deconstruction function 
   ///
-  /// \param[in] Config config
+  /// \return input names
   ///
-  explicit Predictor(const Config& config);
-
+  virtual ~Predictor() = default;
   ///
   /// \brief Get the input names
   ///
   /// \return input names
   ///
-  std::vector<std::string> GetInputNames();
+  virtual std::vector<std::string> GetInputNames() const = 0;
 
   ///
   /// \brief Get the Input Tensor object
@@ -102,21 +94,21 @@ class PD_INFER_DECL Predictor {
   /// \param[in] name input name
   /// \return input tensor
   ///
-  std::unique_ptr<Tensor> GetInputHandle(const std::string& name);
+  virtual std::unique_ptr<Tensor> GetInputHandle(const std::string& name) = 0;
 
   ///
   /// \brief Run the prediction engine
   ///
   /// \return Whether the function executed successfully
   ///
-  bool Run();
+  virtual bool Run() = 0;
 
   ///
   /// \brief Get the output names
   ///
   /// \return output names
   ///
-  std::vector<std::string> GetOutputNames();
+  virtual std::vector<std::string> GetOutputNames() const = 0;
 
   ///
   /// \brief Get the Output Tensor object
@@ -124,17 +116,17 @@ class PD_INFER_DECL Predictor {
   /// \param[in] name otuput name
   /// \return output tensor
   ///
-  std::unique_ptr<Tensor> GetOutputHandle(const std::string& name);
+  virtual std::unique_ptr<Tensor> GetOutputHandle(const std::string& name) = 0;
 
   ///
   /// \brief Clone to get the new predictor. thread safe.
   ///
   /// \return get a new predictor
   ///
-  std::unique_ptr<Predictor> Clone();
+  virtual std::shared_ptr<Predictor> Clone() = 0;
 
   /// \brief Clear the intermediate tensors of the predictor
-  void ClearIntermediateTensor();
+  virtual void ClearIntermediateTensor() = 0;
 
   ///
   /// \brief Release all tmp tensor to compress the size of the memory pool.
@@ -145,10 +137,7 @@ class PD_INFER_DECL Predictor {
   /// released memory, because part of the memory is not managed by the
   /// MemoryPool.
   ///
-  uint64_t TryShrinkMemory();
-
- private:
-  std::unique_ptr<paddle::PaddlePredictor> predictor_;
+  virtual uint64_t TryShrinkMemory() = 0; 
 };
 
 ///
@@ -165,36 +154,7 @@ class PD_INFER_DECL Predictor {
 PD_INFER_DECL std::shared_ptr<Predictor> CreatePredictor(
     const Config& config);  // NOLINT
 
-PD_INFER_DECL int GetNumBytesOfDataType(DataType dtype);
+PD_INFER_DECL std::shared_ptr<Predictor> CreatePredictor(
+    Config&& config);  // NOLINT
 
-PD_INFER_DECL std::string GetVersion();
-PD_INFER_DECL std::string UpdateDllFlag(const char* name, const char* value);
-
-namespace services {
-///
-/// \class PredictorPool
-///
-/// \brief PredictorPool is a simple encapsulation of Predictor, suitable for
-/// use in multi-threaded situations. According to the thread id, the
-/// corresponding Predictor is taken out from PredictorPool to complete the
-/// prediction.
-///
-class PD_INFER_DECL PredictorPool {
- public:
-  PredictorPool() = delete;
-  PredictorPool(const PredictorPool&) = delete;
-  PredictorPool& operator=(const PredictorPool&) = delete;
-
-  /// \brief Construct the predictor pool with \param size predictor instances.
-  explicit PredictorPool(const Config& config, size_t size = 1);
-
-  /// \brief Get \param id-th predictor.
-  Predictor* Retrive(size_t idx);
-
- private:
-  std::shared_ptr<Predictor> main_pred_;
-  std::vector<std::unique_ptr<Predictor>> preds_;
-};
-}  // namespace services
-
-}  // namespace paddle_infer
+} // paddle_innfer

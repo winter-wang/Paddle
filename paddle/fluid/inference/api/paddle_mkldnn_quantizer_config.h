@@ -34,7 +34,7 @@
 #include "paddle_api.h"            // NOLINT
 #include "paddle_infer_declare.h"  // NOLINT
 
-namespace paddle {
+namespace paddle_infer {
 
 ///
 /// \brief Algorithms for finding scale of quantized Tensors.
@@ -191,9 +191,14 @@ struct PD_INFER_DECL MkldnnQuantizerConfig {
   std::map<std::string, std::map<std::string, ScaleAlgo>> rules_;
   std::unordered_set<std::string> enabled_op_types_;
   std::unordered_set<int> excluded_op_ids_;
-  std::shared_ptr<std::vector<PaddleTensor>> warmup_data_;
+  std::shared_ptr<std::vector<paddle::PaddleTensor>> warmup_data_;
   int warmup_bs_{1};
   ScaleAlgo default_scale_algo_{ScaleAlgo::MAX};
 };
+
+}  // namespace paddle_infer
+namespace paddle {
+  using paddle_infer::ScaleAlgo;
+  using paddle_infer::MkldnnQuantizerConfig;
 
 }  // namespace paddle

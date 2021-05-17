@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "paddle/fluid/inference/api/paddle_analysis_config.h"
+#include "paddle/fluid/inference/api/paddle_config.h"
 #include "paddle/fluid/inference/api/paddle_pass_builder.h"
 #include "paddle/fluid/platform/cpu_info.h"
 #include "paddle/fluid/platform/enforce.h"
@@ -22,14 +22,8 @@
 DECLARE_uint64(initial_gpu_memory_in_mb);
 #endif
 
-namespace paddle {
-struct MkldnnQuantizerConfig;
-
-extern const std::vector<std::string> kTRTSubgraphPasses;
-extern const std::vector<std::string> kDlnneSubgraphPasses;
-extern const std::vector<std::string> kLiteSubgraphPasses;
-
-PassStrategy *AnalysisConfig::pass_builder() const {
+namespace paddle_infer {
+PassStrategy *Config::pass_builder() const {
   if (!pass_builder_.get()) {
     if (use_gpu_) {
       LOG(INFO) << "Create GPU IR passes";
@@ -51,26 +45,26 @@ PassStrategy *AnalysisConfig::pass_builder() const {
   return pass_builder_.get();
 }
 
-AnalysisConfig::AnalysisConfig(const std::string &model_dir) {
+Config::Config(const std::string &model_dir) {
   model_dir_ = model_dir;
 
   Update();
 }
-AnalysisConfig::AnalysisConfig(const std::string &prog_file,
+Config::Config(const std::string &prog_file,
                                const std::string &params_file) {
   prog_file_ = prog_file;
   params_file_ = params_file;
 
   Update();
 }
-void AnalysisConfig::SetModel(const std::string &prog_file_path,
+void Config::SetModel(const std::string &prog_file_path,
                               const std::string &params_file_path) {
   prog_file_ = prog_file_path;
   params_file_ = params_file_path;
 
   Update();
 }
-void AnalysisConfig::EnableUseGpu(uint64_t memory_pool_init_size_mb,
+void Config::EnableUseGpu(uint64_t memory_pool_init_size_mb,
                                   int device_id) {
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
   use_gpu_ = true;
@@ -84,19 +78,19 @@ void AnalysisConfig::EnableUseGpu(uint64_t memory_pool_init_size_mb,
 
   Update();
 }
-void AnalysisConfig::DisableGpu() {
+void Config::DisableGpu() {
   use_gpu_ = false;
 
   Update();
 }
 
-void AnalysisConfig::DisableFCPadding() {
+void Config::DisableFCPadding() {
   use_fc_padding_ = false;
 
   Update();
 }
 
-void AnalysisConfig::EnableXpu(int l3_workspace_size, bool locked,
+void Config::EnableXpu(int l3_workspace_size, bool locked,
                                bool autotune, const std::string &autotune_file,
                                const std::string &precision,
                                bool adaptive_seqlen) {
@@ -110,7 +104,7 @@ void AnalysisConfig::EnableXpu(int l3_workspace_size, bool locked,
   Update();
 }
 
-AnalysisConfig::AnalysisConfig(const AnalysisConfig &other) {
+Config::Config(const Config &other) {
 #define CP_MEMBER(member__) member__ = other.member__;
 
   // Model related.
@@ -214,7 +208,7 @@ AnalysisConfig::AnalysisConfig(const AnalysisConfig &other) {
     // Update() will reset all the passes, when some tensorRT pass is deleted in
     // other.pass_builder(), it will set again, so we just remove the
     // deleted_pass.
-    auto all_passes = kTRTSubgraphPasses;
+    auto all_passes = paddle::kTRTSubgraphPasses;
     auto other_passes = other.pass_builder()->AllPasses();
     // We should sort them, because the user may call the SwitchIrDebug
     // interface, which will change the pass.
@@ -229,7 +223,7 @@ AnalysisConfig::AnalysisConfig(const AnalysisConfig &other) {
     }
   }
   if (use_dlnne_) {
-    auto all_passes = kDlnneSubgraphPasses;
+    auto all_passes = paddle::kDlnneSubgraphPasses;
     auto other_passes = other.pass_builder()->AllPasses();
     // We should sort them, because the user may call the SwitchIrDebug
     // interface, which will change the pass.
@@ -245,7 +239,7 @@ AnalysisConfig::AnalysisConfig(const AnalysisConfig &other) {
   }
 }
 
-void AnalysisConfig::EnableCUDNN() {
+void Config::EnableCUDNN() {
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
   use_cudnn_ = use_gpu_;
 #else
@@ -256,7 +250,7 @@ void AnalysisConfig::EnableCUDNN() {
   Update();
 }
 
-void AnalysisConfig::EnableMKLDNN() {
+void Config::EnableMKLDNN() {
 #ifdef PADDLE_WITH_MKLDNN
   use_mkldnn_ = true;
 #else
@@ -267,7 +261,7 @@ void AnalysisConfig::EnableMKLDNN() {
   Update();
 }
 
-void AnalysisConfig::SetMkldnnCacheCapacity(int capacity) {
+void Config::SetMkldnnCacheCapacity(int capacity) {
 #ifdef PADDLE_WITH_MKLDNN
   mkldnn_cache_capacity_ = capacity;
 #else
@@ -276,7 +270,7 @@ void AnalysisConfig::SetMkldnnCacheCapacity(int capacity) {
 #endif
 }
 
-void AnalysisConfig::EnableMkldnnQuantizer() {
+void Config::EnableMkldnnQuantizer() {
 #ifdef PADDLE_WITH_MKLDNN
   if (!mkldnn_quantizer_config_)
     mkldnn_quantizer_config_.reset(new MkldnnQuantizerConfig());
@@ -289,7 +283,7 @@ void AnalysisConfig::EnableMkldnnQuantizer() {
   Update();
 }
 
-void AnalysisConfig::EnableMkldnnBfloat16() {
+void Config::EnableMkldnnBfloat16() {
 #ifdef PADDLE_WITH_MKLDNN
   if (platform::MayIUse(platform::cpu_isa_t::avx512_core)) {
     use_mkldnn_bfloat16_ = true;
@@ -309,16 +303,16 @@ void AnalysisConfig::EnableMkldnnBfloat16() {
   Update();
 }
 
-MkldnnQuantizerConfig *AnalysisConfig::mkldnn_quantizer_config() const {
+MkldnnQuantizerConfig *Config::mkldnn_quantizer_config() const {
   PADDLE_ENFORCE_NOT_NULL(mkldnn_quantizer_config_,
                           platform::errors::PreconditionNotMet(
                               "MkldnnQuantizer was not enabled yet."));
   return mkldnn_quantizer_config_.get();
 }
 
-void AnalysisConfig::EnableTensorRtEngine(
+void Config::EnableTensorRtEngine(
     int workspace_size, int max_batch_size, int min_subgraph_size,
-    AnalysisConfig::Precision precision_mode, bool use_static,
+    Config::Precision precision_mode, bool use_static,
     bool use_calib_mode) {
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
   if (!use_gpu()) {
@@ -341,13 +335,13 @@ void AnalysisConfig::EnableTensorRtEngine(
 #endif
 }
 
-void AnalysisConfig::EnableDlnne(int min_subgraph_size) {
+void Config::EnableDlnne(int min_subgraph_size) {
   use_dlnne_ = true;
   dlnne_min_subgraph_size_ = min_subgraph_size;
   Update();
 }
 
-void AnalysisConfig::SetTRTDynamicShapeInfo(
+void Config::SetTRTDynamicShapeInfo(
     std::map<std::string, std::vector<int>> min_input_shape,
     std::map<std::string, std::vector<int>> max_input_shape,
     std::map<std::string, std::vector<int>> optim_input_shape,
@@ -358,20 +352,20 @@ void AnalysisConfig::SetTRTDynamicShapeInfo(
   disable_trt_plugin_fp16_ = disable_trt_plugin_fp16;
 }
 
-void AnalysisConfig::EnableTensorRtDLA(int dla_core) {
+void Config::EnableTensorRtDLA(int dla_core) {
   trt_use_dla_ = true;
   trt_dla_core_ = dla_core;
 }
 
-void AnalysisConfig::Exp_DisableTensorRtOPs(
+void Config::Exp_DisableTensorRtOPs(
     const std::vector<std::string> &ops) {
   trt_disabled_ops_.insert(trt_disabled_ops_.end(), ops.begin(), ops.end());
 }
 
-void AnalysisConfig::EnableTensorRtOSS() { trt_use_oss_ = true; }
+void Config::EnableTensorRtOSS() { trt_use_oss_ = true; }
 
 // TODO(Superjomn) refactor this, buggy.
-void AnalysisConfig::Update() {
+void Config::Update() {
   auto info = SerializeInfoCache();
   if (info == serialized_info_cache_) return;
 
@@ -413,8 +407,8 @@ void AnalysisConfig::Update() {
 
   if (use_tensorrt_) {
     pass_builder()->ClearPasses();
-    for (const auto &pass : kTRTSubgraphPasses) {
-      if (tensorrt_precision_mode_ == AnalysisConfig::Precision::kInt8 &&
+    for (const auto &pass : paddle::kTRTSubgraphPasses) {
+      if (tensorrt_precision_mode_ == Config::Precision::kInt8 &&
           (pass == "conv_bn_fuse_pass")) {
         continue;
       }
@@ -424,7 +418,7 @@ void AnalysisConfig::Update() {
   LOG(INFO) << "use_dlnne_:" << use_dlnne_ << std::endl;
   if (use_dlnne_) {
     pass_builder()->ClearPasses();
-    for (const auto &pass : kDlnneSubgraphPasses) {
+    for (const auto &pass : paddle::kDlnneSubgraphPasses) {
       pass_builder()->AppendPass(pass);
     }
   }
@@ -482,7 +476,7 @@ void AnalysisConfig::Update() {
                     "but did not have the option -DWITH_LITE compiled.";
 #endif
     pass_builder()->ClearPasses();
-    for (const auto &pass : kLiteSubgraphPasses) {
+    for (const auto &pass : paddle::kLiteSubgraphPasses) {
       if (std::find(lite_passes_filter_.begin(), lite_passes_filter_.end(),
                     pass) == lite_passes_filter_.end()) {
         pass_builder()->AppendPass(pass);
@@ -508,7 +502,7 @@ void AnalysisConfig::Update() {
   }
 }
 
-std::string AnalysisConfig::SerializeInfoCache() {
+std::string Config::SerializeInfoCache() {
   std::stringstream ss;
   ss << model_dir_;
   ss << prog_file_;
@@ -572,14 +566,14 @@ std::string AnalysisConfig::SerializeInfoCache() {
   return ss.str();
 }
 
-void AnalysisConfig::SetCpuMathLibraryNumThreads(
+void Config::SetCpuMathLibraryNumThreads(
     int cpu_math_library_num_threads) {
   cpu_math_library_num_threads_ = cpu_math_library_num_threads;
 
   Update();
 }
 
-float AnalysisConfig::fraction_of_gpu_memory_for_pool() const {
+float Config::fraction_of_gpu_memory_for_pool() const {
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
   // Get the GPU memory details and calculate the fraction of memory for the
   // GPU memory pool.
@@ -599,16 +593,16 @@ float AnalysisConfig::fraction_of_gpu_memory_for_pool() const {
 #endif
 }
 
-void AnalysisConfig::EnableMemoryOptim() {
+void Config::EnableMemoryOptim() {
   enable_memory_optim_ = true;
   Update();
 }
 
-bool AnalysisConfig::enable_memory_optim() const {
+bool Config::enable_memory_optim() const {
   return enable_memory_optim_;
 }
 
-void AnalysisConfig::SetModelBuffer(const char *prog_buffer,
+void Config::SetModelBuffer(const char *prog_buffer,
                                     size_t prog_buffer_size,
                                     const char *param_buffer,
                                     size_t param_buffer_size) {
@@ -619,7 +613,7 @@ void AnalysisConfig::SetModelBuffer(const char *prog_buffer,
   Update();
 }
 
-NativeConfig AnalysisConfig::ToNativeConfig() const {
+NativeConfig Config::ToNativeConfig() const {
   NativeConfig config;
   config.model_dir = model_dir_;
   config.prog_file = prog_file_;
@@ -631,23 +625,23 @@ NativeConfig AnalysisConfig::ToNativeConfig() const {
   return config;
 }
 
-void AnalysisConfig::SwitchIrDebug(int x) {
+void Config::SwitchIrDebug(int x) {
   ir_debug_ = x;
   Update();
 }
 
-void AnalysisConfig::EnableProfile() {
+void Config::EnableProfile() {
   with_profile_ = true;
   Update();
 }
 
-void AnalysisConfig::DisableGlogInfo() {
+void Config::DisableGlogInfo() {
   with_glog_info_ = false;
   Update();
 }
 
-void AnalysisConfig::EnableLiteEngine(
-    AnalysisConfig::Precision precision_mode, bool zero_copy,
+void Config::EnableLiteEngine(
+    Config::Precision precision_mode, bool zero_copy,
     const std::vector<std::string> &passes_filter,
     const std::vector<std::string> &ops_filter) {
   use_lite_ = true;
@@ -658,13 +652,13 @@ void AnalysisConfig::EnableLiteEngine(
   Update();
 }
 
-void AnalysisConfig::PartiallyRelease() {
+void Config::PartiallyRelease() {
   prog_file_.clear();
   prog_file_.shrink_to_fit();
   params_file_.clear();
   params_file_.shrink_to_fit();
 }
 
-void AnalysisConfig::EnableGpuMultiStream() { thread_local_stream_ = true; }
+void Config::EnableGpuMultiStream() { thread_local_stream_ = true; }
 
 }  // namespace paddle

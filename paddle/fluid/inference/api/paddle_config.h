@@ -38,50 +38,48 @@
 // the abstract path of this header file will be changed.
 #include "paddle_api.h"           // NOLINT
 #include "paddle_pass_builder.h"  // NOLINT
-#ifdef PADDLE_WITH_MKLDNN
 #include "paddle_mkldnn_quantizer_config.h"  // NOLINT
-#endif
 
 namespace paddle {
+  class AnalysisPredictor;
+}  // paddle
 
-class AnalysisPredictor;
-struct MkldnnQuantizerConfig;
-
+namespace paddle_infer {
 ///
 /// \brief configuration manager for AnalysisPredictor.
 /// \since 1.7.0
 ///
-/// AnalysisConfig manages configurations of AnalysisPredictor.
+/// Config manages configurations of AnalysisPredictor.
 /// During inference procedure, there are many parameters(model/params path,
 /// place of inference, etc.)
 /// to be specified, and various optimizations(subgraph fusion, memory
 /// optimazation, TensorRT engine, etc.)
 /// to be done. Users can manage these settings by creating and modifying an
-/// AnalysisConfig,
+/// Config,
 /// and loading it into AnalysisPredictor.
 ///
-struct PD_INFER_DECL AnalysisConfig {
-  AnalysisConfig() = default;
+struct PD_INFER_DECL Config {
+  Config() = default;
   ///
-  /// \brief Construct a new AnalysisConfig from another
-  /// AnalysisConfig.
+  /// \brief Construct a new Config from another
+  /// Config.
   ///
-  /// \param[in] other another AnalysisConfig
+  /// \param[in] other another Config
   ///
-  explicit AnalysisConfig(const AnalysisConfig& other);
+  explicit Config(const Config& other);
   ///
-  /// \brief Construct a new AnalysisConfig from a no-combined model.
+  /// \brief Construct a new Config from a no-combined model.
   ///
   /// \param[in] model_dir model directory of the no-combined model.
   ///
-  explicit AnalysisConfig(const std::string& model_dir);
+  explicit Config(const std::string& model_dir);
   ///
-  /// \brief Construct a new AnalysisConfig from a combined model.
+  /// \brief Construct a new Config from a combined model.
   ///
   /// \param[in] prog_file model file path of the combined model.
   /// \param[in] params_file params file path of the combined model.
   ///
-  explicit AnalysisConfig(const std::string& prog_file,
+  explicit Config(const std::string& prog_file,
                           const std::string& params_file);
   ///
   /// \brief Precision of inference in TensorRT.
@@ -234,7 +232,7 @@ struct PD_INFER_DECL AnalysisConfig {
 
   ///
   /// \brief Control whether to perform IR graph optimization.
-  /// If turned off, the AnalysisConfig will act just like a NativeConfig.
+  /// If turned off, the Config will act just like a NativeConfig.
   ///
   /// \param x Whether the ir graph optimization is actived.
   ///
@@ -374,7 +372,7 @@ struct PD_INFER_DECL AnalysisConfig {
   /// \param ops_filter Operators not supported by Lite.
   ///
   void EnableLiteEngine(
-      AnalysisConfig::Precision precision_mode = Precision::kFloat32,
+      Config::Precision precision_mode = Precision::kFloat32,
       bool zero_copy = false,
       const std::vector<std::string>& passes_filter = {},
       const std::vector<std::string>& ops_filter = {});
@@ -435,11 +433,11 @@ struct PD_INFER_DECL AnalysisConfig {
   }
 
   ///
-  /// \brief Transform the AnalysisConfig to NativeConfig.
+  /// \brief Transform the Config to NativeConfig.
   ///
   /// \return NativeConfig The NativeConfig transformed.
   ///
-  NativeConfig ToNativeConfig() const;
+  paddle::NativeConfig ToNativeConfig() const;
   ///
   /// \brief Specify the operator type list to use MKLDNN acceleration.
   ///
@@ -554,15 +552,15 @@ struct PD_INFER_DECL AnalysisConfig {
   bool glog_info_disabled() const { return !with_glog_info_; }
 
   ///
-  /// \brief Set the AnalysisConfig to be invalid.
-  /// This is to ensure that an AnalysisConfig can only be used in one
+  /// \brief Set the Config to be invalid.
+  /// This is to ensure that an Config can only be used in one
   /// AnalysisPredictor.
   ///
   void SetInValid() const { is_valid_ = false; }
   ///
-  /// \brief A boolean state telling whether the AnalysisConfig is valid.
+  /// \brief A boolean state telling whether the Config is valid.
   ///
-  /// \return bool Whether the AnalysisConfig is valid.
+  /// \return bool Whether the Config is valid.
   ///
   bool is_valid() const { return is_valid_; }
 
@@ -573,7 +571,7 @@ struct PD_INFER_DECL AnalysisConfig {
   /// NOTE: Just for developer, not an official API, easy to be broken.
   ///
   ///
-  PassStrategy* pass_builder() const;
+  paddle::PassStrategy* pass_builder() const;
 
   ///
   /// \brief Enable the GPU multi-computing stream feature.
@@ -660,7 +658,7 @@ struct PD_INFER_DECL AnalysisConfig {
   // A runtime cache, shouldn't be transferred to others.
   std::string serialized_info_cache_;
 
-  mutable std::unique_ptr<PassStrategy> pass_builder_;
+  mutable std::unique_ptr<paddle::PassStrategy> pass_builder_;
 
   bool use_lite_{false};
   std::vector<std::string> lite_passes_filter_;
@@ -691,5 +689,10 @@ struct PD_INFER_DECL AnalysisConfig {
   mutable bool is_valid_{true};
   std::string opt_cache_dir_;
 };
+
+}  // namespace paddle_infer
+
+namespace paddle {
+  using AnalysisConfig = paddle_infer::Config;
 
 }  // namespace paddle

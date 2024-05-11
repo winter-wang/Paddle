@@ -13,6 +13,8 @@
 # limitations under the License.
 
 # all registered reshard functions
+import paddle
+
 _g_reshard_func_list = []
 
 
@@ -64,3 +66,22 @@ def is_replicated(dist_attr):
     ):
         return True
     return False
+
+
+class LocalShapeGuard:
+    """
+    LocalShapeGuard class.
+
+    LocalShapeGuard class is used to create a dist communication op with local shape.
+    """
+
+    def __enter__(self):
+        paddle.base.libpaddle.pir.use_local_shape_to_infer(True)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        paddle.base.libpaddle.pir.use_local_shape_to_infer(False)
+        return True
+
+
+def dist_type_from_local(local_type, mesh, placements):
+    return None

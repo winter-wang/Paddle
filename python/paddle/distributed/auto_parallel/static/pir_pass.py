@@ -15,6 +15,7 @@
 import paddle
 
 from .reshard_funcs.base_reshard_func import (
+    LocalShapeGuard,
     choose_reshard_func,
 )
 from .reshard_funcs.reshard_func_register import register_reshard_funcs
@@ -135,12 +136,13 @@ def apply_reshard_pass(program):
                 reshard_func is not None
             ), f'There is no reshard function that matches src_dist_attr: {src_dist_attr} and dst_dist_attr: {dst_dist_attr}'
             paddle.pir.set_insertion_point_after(op)
-            out_value = reshard_func.reshard(
-                src_dist_attr,
-                dst_dist_attr,
-                op.operand_source(0),
-                op.result(0).type(),
-            )
+            with LocalShapeGuard():
+                out_value = reshard_func.reshard(
+                    src_dist_attr,
+                    dst_dist_attr,
+                    op.operand_source(0),
+                    op.result(0).type(),
+                )
             if out_value is not None:
                 op.result(0).replace_all_uses_with(out_value)
             if op.result(0).use_empty():

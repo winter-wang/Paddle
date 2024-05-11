@@ -18,7 +18,7 @@ from op_build_gen import (
     _PREPARE_DATA_WITH_VECTOR_INT64_MTTABLE_ATTRIBUTE,
 )
 
-op_list_support_infer_shape_by_local = ["c_allgather"]
+op_list_support_infer_shape_by_local = ["c_allgather", "slice"]
 
 
 OP_INFERMETA_DECL_STRING = (

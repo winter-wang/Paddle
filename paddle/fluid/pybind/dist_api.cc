@@ -124,6 +124,7 @@ void BindDistUtils(pybind11::module *m) {
   m->def("create_tensor_dist_attribute", CreateTensorDistAttribute);
   m->def("create_op_dist_attribute", CreateOperationDistAttribute);
   m->def("cvt_to_dist_type", &dialect::CvtToPirDistTensorType);
+  m->def("use_local_shape_to_infer", &dialect::GuardLocalShape);
 }
 
 void BindDistPassAPI(pybind11::module *module) {

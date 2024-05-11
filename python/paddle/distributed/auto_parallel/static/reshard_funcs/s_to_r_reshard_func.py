@@ -92,7 +92,8 @@ class SToRReshardFunction(ReshardFunction):
         allgather_value = paddle._C_ops.c_allgather(
             src_value, group.id, num_of_process, True
         )
-        allgather_value.set_type(dst_type)
+        # allgather_value.set_type(dst_type)
+        allgather_value.update()
 
         # set op_dist_attr
         new_dist_attr = paddle.base.libpaddle.pir.create_tensor_dist_attribute(

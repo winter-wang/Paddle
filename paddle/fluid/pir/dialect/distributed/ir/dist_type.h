@@ -31,7 +31,7 @@ class DistDenseTensorType
                                  pir::Type,
                                  DistDenseTensorTypeStorage,
                                  pir::WrapTypeInterface,
-                                 DistTypeInterface> {
+                                 DistTensorType> {
  public:
   using Base::Base;
   using LoD = pir::DenseTensorTypeStorage::LoD;

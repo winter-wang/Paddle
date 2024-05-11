@@ -18,6 +18,9 @@ from op_build_gen import (
     _PREPARE_DATA_WITH_VECTOR_INT64_MTTABLE_ATTRIBUTE,
 )
 
+op_list_support_infer_shape_by_local = ["c_allgather"]
+
+
 OP_INFERMETA_DECL_STRING = (
     "  static void InferMeta(phi::InferMetaContext *infer_meta );\n"
     "  static std::vector<pir::Type> InferMeta( const std::vector<pir::Value>& input_values, pir::AttributeMap* p_attributes );"
@@ -65,8 +68,24 @@ GET_INPUT_TYPE_TEMPLATE = """
   }}
 """
 
+GET_INPUT_TYPE_TEMPLATE_1 = """
+  {type} {name};
+  pir::Type {name}_type = {name}_.type();
+  if(auto dist_type = {name}_type.dyn_cast<DistTensorType>()) {{
+    if(IsLocalShapeGuarded()) {{
+        {name}_type =  dist_type.local_type();
+    }}
+  }}
+  if ({name}_type.isa<{type}>()) {{
+    {name} = {name}_type.dyn_cast<{type}>(); (void){name};
+  }} else {{
+    PADDLE_THROW(phi::errors::Unimplemented("Only support {type} or {allocated_type}"));
+  }}
+"""
+
 
 def get_infermeta_inputs_str(
+    args,
     op_info,
     inuse_infer_meta_args,
     op_input_name_list,
@@ -126,12 +145,22 @@ def get_infermeta_inputs_str(
                         "SparseCsrTensorType", "AllocatedSparseCsrTensorType"
                     )
                 )
-                infermeta_inputs_str += GET_INPUT_TYPE_TEMPLATE.format(
-                    type=type,
-                    name=op_input_name_list[idx],
-                    allocated_type=allocated_type,
-                )
-
+                if (
+                    args.with_distributed
+                    and op_info.op_phi_name[0]
+                    in op_list_support_infer_shape_by_local
+                ):
+                    infermeta_inputs_str += GET_INPUT_TYPE_TEMPLATE_1.format(
+                        type=type,
+                        name=op_input_name_list[idx],
+                        allocated_type=allocated_type,
+                    )
+                else:
+                    infermeta_inputs_str += GET_INPUT_TYPE_TEMPLATE.format(
+                        type=type,
+                        name=op_input_name_list[idx],
+                        allocated_type=allocated_type,
+                    )
     return infermeta_inputs_str
 
 
@@ -863,7 +892,7 @@ def GenDistBranch(args, op_info):
     if len(op_info.mutable_attribute_name_list) > 0:
         TEMPLATE = """
     for(int i = {input_size}; i < {all_input_size}; ++i) {{
-        if(auto dist_type = input_values[i].type().dyn_cast<DistTypeInterface>()) {{
+        if(auto dist_type = input_values[i].type().dyn_cast<DistTensorType>()) {{
             dist_operand_attrs.push_back(dist_type.tensor_dist_attr());
         }}
         else {{
@@ -881,7 +910,7 @@ def GenDistBranch(args, op_info):
         TEMPLATE = """
     auto dist_attr_{name} = CvtToPirAttr(spmd_info.second[{idx}]);
     dist_result_attrs.push_back(dist_attr_{name});
-    argument_outputs.push_back(CvtToPirDistType({name}_type, dist_attr_{name}));
+    argument_outputs.push_back(CvtToPirDistTensorType({name}_type, dist_attr_{name}));
 """
         dist_branch_str += TEMPLATE.format(idx=idx, name=output_name)
     TEMPLATE = """
@@ -927,6 +956,7 @@ def gen_infermeta_func_str(args, op_info):
     op_info.spmd_params = spmd_params
 
     infermeta_inputs_str = get_infermeta_inputs_str(
+        args,
         op_info,
         inuse_infer_meta_args + spmd_params,
         op_info.input_name_list,

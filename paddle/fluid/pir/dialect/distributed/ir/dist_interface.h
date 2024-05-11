@@ -21,8 +21,7 @@
 namespace paddle {
 namespace dialect {
 
-class IR_API DistTypeInterface
-    : public pir::TypeInterfaceBase<DistTypeInterface> {
+class IR_API DistTensorType : public pir::TypeInterfaceBase<DistTensorType> {
  public:
   struct Concept {
     /// Defined these methods with the interface.
@@ -75,8 +74,8 @@ class IR_API DistTypeInterface
                   CopyWithNewDistAttr) {}
   };
 
-  DistTypeInterface(pir::Type type, Concept *impl)
-      : pir::TypeInterfaceBase<DistTypeInterface>(type), impl_(impl) {}
+  DistTensorType(pir::Type type, Concept *impl)
+      : pir::TypeInterfaceBase<DistTensorType>(type), impl_(impl) {}
 
   pir::Type local_type() { return impl_->local_type(*this); }
 
@@ -88,13 +87,13 @@ class IR_API DistTypeInterface
     return impl_->tensor_dist_attr(*this);
   }
 
-  DistTypeInterface CopyWithNewMesh(ProcessMeshAttribute mesh) {
-    return DistTypeInterface(impl_->copy_with_new_mesh(*this, mesh), impl_);
+  DistTensorType CopyWithNewMesh(ProcessMeshAttribute mesh) {
+    return DistTensorType(impl_->copy_with_new_mesh(*this, mesh), impl_);
   }
 
-  DistTypeInterface CopyWithNewDistAttr(TensorDistAttribute dist_attr) {
-    return DistTypeInterface(impl_->copy_with_new_dist_attr(*this, dist_attr),
-                             impl_);
+  DistTensorType CopyWithNewDistAttr(TensorDistAttribute dist_attr) {
+    return DistTensorType(impl_->copy_with_new_dist_attr(*this, dist_attr),
+                          impl_);
   }
 
  private:
@@ -104,4 +103,4 @@ class IR_API DistTypeInterface
 }  // namespace dialect
 }  // namespace paddle
 
-IR_EXPORT_DECLARE_EXPLICIT_TYPE_ID(paddle::dialect::DistTypeInterface)
+IR_EXPORT_DECLARE_EXPLICIT_TYPE_ID(paddle::dialect::DistTensorType)

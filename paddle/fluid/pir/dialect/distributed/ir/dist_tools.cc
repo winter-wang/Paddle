@@ -17,13 +17,16 @@
 #include "paddle/common/enforce.h"
 #include "paddle/pir/include/core/operation.h"
 
+namespace {
+std::atomic_bool local_shape_guard{false};
+}  // namespace
 namespace paddle {
 namespace dialect {
 
 bool HasDistInput(const std::vector<pir::Value>& inputs,
                   ProcessMeshAttribute* p_mesh_attr) {
   for (auto value : inputs) {
-    if (auto dist_type = value.type().dyn_cast<DistTypeInterface>()) {
+    if (auto dist_type = value.type().dyn_cast<DistTensorType>()) {
       if (p_mesh_attr) {
         *p_mesh_attr = dist_type.process_mesh_attr();
       }
@@ -34,7 +37,7 @@ bool HasDistInput(const std::vector<pir::Value>& inputs,
         continue;
       }
       for (size_t idx = 0; idx < vec_type.size(); ++idx) {
-        if (auto dist_type = vec_type[idx].dyn_cast<DistTypeInterface>()) {
+        if (auto dist_type = vec_type[idx].dyn_cast<DistTensorType>()) {
           if (p_mesh_attr) {
             *p_mesh_attr = dist_type.process_mesh_attr();
           }
@@ -51,8 +54,7 @@ void CvtAllInputsToDist(const std::vector<pir::Value>& inputs,
                         ProcessMeshAttribute mesh_attr) {
   for (auto value : inputs) {
     if (auto type = value.type()) {
-      if (type.isa<DistTypeInterface>() || type.isa<pir::VectorType>())
-        continue;
+      if (type.isa<DistTensorType>() || type.isa<pir::VectorType>()) continue;
       auto dense_type = type.dyn_cast<pir::DenseTensorType>();
       if (!dense_type) {
         PADDLE_THROW(common::errors::Unimplemented(
@@ -112,7 +114,8 @@ pir::Attribute CvtToPirAttr(const phi::distributed::ArgDistAttr& dist_attr) {
   }
 }
 
-pir::Type CvtToPirDistType(pir::Type prim_type, pir::Attribute dist_attr) {
+pir::Type CvtToPirDistTensorType(pir::Type prim_type,
+                                 pir::Attribute dist_attr) {
   if (!prim_type) return nullptr;
   auto ctx = pir::IrContext::Instance();
   if (auto dense_tensor_type = prim_type.dyn_cast<pir::DenseTensorType>()) {
@@ -141,7 +144,8 @@ pir::Type CvtToPirDistType(pir::Type prim_type, pir::Attribute dist_attr) {
             "The vector type size must equal to array attribute size."));
     std::vector<pir::Type> dist_vec_type;
     for (size_t idx = 0; idx < vec_type.size(); ++idx) {
-      dist_vec_type.push_back(CvtToPirDistType(vec_type[idx], array_attr[idx]));
+      dist_vec_type.push_back(
+          CvtToPirDistTensorType(vec_type[idx], array_attr[idx]));
     }
     return pir::VectorType::get(ctx, dist_vec_type);
   } else {
@@ -155,7 +159,7 @@ pir::Type CvtToPirDistType(pir::Type prim_type, pir::Attribute dist_attr) {
 }
 
 void CopyLeafOpToMesh(pir::Value value, ProcessMeshAttribute mesh_attr) {
-  if (auto dist_type = value.type().dyn_cast<DistTypeInterface>()) {
+  if (auto dist_type = value.type().dyn_cast<DistTensorType>()) {
     if (dist_type.process_mesh_attr() == mesh_attr) {
       return;
     }
@@ -178,5 +182,9 @@ void CopyLeafOpToMesh(pir::Value value, ProcessMeshAttribute mesh_attr) {
     }
   }
 }
+
+void GuardLocalShape(bool guard) { local_shape_guard.store(guard); }
+bool IsLocalShapeGuarded() { return local_shape_guard.load(); }
+
 }  // namespace dialect
 }  // namespace paddle

@@ -203,7 +203,7 @@ TEST(dist_dense_tensor_type_test, dist_interface) {
             dense_tensor_type);
 
   // test local cast
-  auto local_dense_tensor_type = dist_densor_type.dyn_cast<DistTypeInterface>()
+  auto local_dense_tensor_type = dist_densor_type.dyn_cast<DistTensorType>()
                                      .local_type()
                                      .dyn_cast<pir::DenseTensorType>();
   EXPECT_TRUE(local_dense_tensor_type.isa<pir::DenseTensorType>());

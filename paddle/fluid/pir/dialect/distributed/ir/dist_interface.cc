@@ -16,4 +16,4 @@
 
 namespace paddle::dialect {}  // namespace paddle::dialect
 
-IR_DEFINE_EXPLICIT_TYPE_ID(paddle::dialect::DistTypeInterface)
+IR_DEFINE_EXPLICIT_TYPE_ID(paddle::dialect::DistTensorType)

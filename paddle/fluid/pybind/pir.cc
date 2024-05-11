@@ -85,7 +85,7 @@ using paddle::dialect::ApiBuilder;
 using paddle::dialect::DenseTensorArrayType;
 using paddle::dialect::DenseTensorType;
 using paddle::dialect::DistDenseTensorType;
-using paddle::dialect::DistTypeInterface;
+using paddle::dialect::DistTensorType;
 using paddle::dialect::IfOp;
 using paddle::dialect::PyLayerOp;
 using paddle::dialect::SelectedRowsType;
@@ -1167,20 +1167,19 @@ void BindValue(py::module *m) {
       .def("is_combine",
            [](Value self) { return self.type().isa<pir::VectorType>(); })
       .def("is_dist",
-           [](Value self) { return self.type().isa<DistTypeInterface>(); })
-      .def(
-          "dist_attr",
-          [](Value &self) {
-            if (!self.type().isa<DistTypeInterface>()) {
-              PADDLE_THROW(common::errors::InvalidArgument(
-                  "dist_attr is only for dist type tensor."));
-            }
-            return self.type().dyn_cast<DistTypeInterface>().tensor_dist_attr();
-          })
+           [](Value self) { return self.type().isa<DistTensorType>(); })
+      .def("dist_attr",
+           [](Value &self) {
+             if (!self.type().isa<DistTensorType>()) {
+               PADDLE_THROW(common::errors::InvalidArgument(
+                   "dist_attr is only for dist type tensor."));
+             }
+             return self.type().dyn_cast<DistTensorType>().tensor_dist_attr();
+           })
       // The function will calculate the new local shape based on the global
       // shape and the dist_attr argument.
       .def("update_dist_attr", [](Value &self, TensorDistAttribute dist_attr) {
-        self.set_type(dialect::CvtToPirDistType(self.type(), dist_attr));
+        self.set_type(dialect::CvtToPirDistTensorType(self.type(), dist_attr));
       });
 }
 

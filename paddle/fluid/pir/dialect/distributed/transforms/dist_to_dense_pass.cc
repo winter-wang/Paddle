@@ -41,7 +41,7 @@ namespace paddle {
 namespace dialect {
 
 pir::Type CastToLocalType(pir::Type type) {
-  if (auto dist_type = type.dyn_cast<DistTypeInterface>()) {
+  if (auto dist_type = type.dyn_cast<DistTensorType>()) {
     return dist_type.local_type();
   } else if (auto vec_type = type.dyn_cast<pir::VectorType>()) {
     std::vector<pir::Type> local_types;
@@ -59,7 +59,9 @@ pir::Type CastToLocalType(pir::Type type) {
   }
 }
 
-inline bool IsDistType(pir::Type type) { return type.isa<DistTypeInterface>(); }
+inline bool IsDistTensorType(pir::Type type) {
+  return type.isa<DistTensorType>();
+}
 
 void ProcessDistBlock(pir::Block* block) {
   for (auto iter = block->begin(); iter != block->end(); ++iter) {
@@ -108,7 +110,7 @@ void VerifyDenseBlock(pir::Block* block) {
       auto result = op_item->result(i);
 
       PADDLE_ENFORCE_EQ(
-          IsDistType(result.type()),
+          IsDistTensorType(result.type()),
           false,
           phi::errors::PreconditionNotMet(
               "Block op [%s] still contain dist type.", op_item->name()));

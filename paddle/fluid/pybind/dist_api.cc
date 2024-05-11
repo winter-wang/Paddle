@@ -123,7 +123,7 @@ OperationDistAttribute CreateOperationDistAttribute(
 void BindDistUtils(pybind11::module *m) {
   m->def("create_tensor_dist_attribute", CreateTensorDistAttribute);
   m->def("create_op_dist_attribute", CreateOperationDistAttribute);
-  m->def("cvt_to_dist_type", &dialect::CvtToPirDistType);
+  m->def("cvt_to_dist_type", &dialect::CvtToPirDistTensorType);
 }
 
 void BindDistPassAPI(pybind11::module *module) {

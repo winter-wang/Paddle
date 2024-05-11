@@ -29,7 +29,7 @@ void CvtAllInputsToDist(const std::vector<pir::Value>& inputs,
 
 phi::distributed::DistMetaTensor CvtToDistMetaTensor(DistDenseTensorType type);
 pir::Attribute CvtToPirAttr(const phi::distributed::ArgDistAttr& dist_attr);
-pir::Type CvtToPirDistType(pir::Type prim_type, pir::Attribute dist_attr);
+pir::Type CvtToPirDistTensorType(pir::Type prim_type, pir::Attribute dist_attr);
 
 ///
 /// When the following conditions are met:
@@ -42,6 +42,9 @@ pir::Type CvtToPirDistType(pir::Type prim_type, pir::Attribute dist_attr);
 /// Otherwise, the function does nothing.
 ///
 void CopyLeafOpToMesh(pir::Value value, ProcessMeshAttribute mesh_attr);
+
+bool IsLocalShapeGuarded();
+void GuardLocalShape(bool guard = true);
 
 }  // namespace dialect
 }  // namespace paddle

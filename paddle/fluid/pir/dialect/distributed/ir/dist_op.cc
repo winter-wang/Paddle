@@ -178,7 +178,7 @@ std::vector<std::vector<pir::Value>> ReshardOp::Vjp(
                     1,
                     common::errors::InvalidArgument(
                         "reshard op's inputs[0]'s size should be 1"));
-  auto dist_type = inputs_[0][0].type().dyn_cast<DistTypeInterface>();
+  auto dist_type = inputs_[0][0].type().dyn_cast<DistTensorType>();
 
   PADDLE_ENFORCE_NOT_NULL(
       dist_type,

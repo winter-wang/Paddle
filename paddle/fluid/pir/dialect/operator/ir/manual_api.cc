@@ -66,8 +66,7 @@ void set_parameter(const pir::Value& parameter, const std::string& name) {
 void shadow_output(const pir::Value& persist_value, const std::string& name) {
   auto& builder = ApiBuilder::Instance().GetBuilder();
   auto op = builder->Build<pir::ShadowOutputOp>(persist_value, name);
-  if (auto dist_interface =
-          persist_value.type().dyn_cast<DistTypeInterface>()) {
+  if (auto dist_interface = persist_value.type().dyn_cast<DistTensorType>()) {
     op->set_attribute(
         kAttrOpDistAttr,
         OperationDistAttribute::get(builder->ir_context(),
